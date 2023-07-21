@@ -12,7 +12,7 @@ import warnings
 warnings.filterwarnings('ignore')
 _=load_dotenv(find_dotenv())
 openai.api_key=os.environ['OPENAI_API_KEY']
-chat=ChatOpenAI(temperature=0)
+chat=ChatOpenAI(temperature=0,request_timeout=120)
 memory=ConversationBufferMemory()
 template="""You are a very smart medical doctor named VegaBot. \
 You are great at answering questions about medicine in a concise\
@@ -29,7 +29,14 @@ prompt=PromptTemplate(input_variables=['history','input'],template=template)
 conversation=ConversationChain(prompt=prompt,llm=chat,memory=memory,verbose=False)
 @app.route('/get_response', methods=['POST'])
 def get_response():
-    user_input = request.form['user_input']
-    bot_response = conversation.predict(input=user_input)
-    response_data = {'response': bot_response}
-    return jsonify(response_data)
+    try:
+        data = request.get_json()
+        user_input = data['user_input']
+        print (user_input)
+        bot_response = conversation.predict(input=user_input)
+        response_data = {'response': bot_response}
+        return jsonify(response_data)
+    except Exception as e:
+        error_msg = {'error': 'Invalid request data. Please provide a valid "user_input" field in the JSON data.'}
+        print(e)
+        return jsonify(error_msg), 400
